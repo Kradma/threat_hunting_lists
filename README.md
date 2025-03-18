@@ -11,6 +11,7 @@ The dataset is based on:
 - Each row consists of:
   - `Rank`: The position of the domain based on traffic.
   - `Domain`: The domain name.
+  - `Tld`: The top level domain name.
 
 ## Usage
 This dataset can be used for:

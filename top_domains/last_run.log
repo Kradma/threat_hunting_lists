@@ -1,0 +1,8 @@
+⬇️  Descargando http://s3-us-west-1.amazonaws.com/umbrella-static/top-1m.csv.zip …
+📦 Descomprimiendo ZIP …
+✂️  Generando fichero truncado a 850 KB (sin cortar líneas) …
+✅ /opt/threat_hunting_lists/top_domains/top-850kb.csv creado (850.0 KB)
+🏆 Generando fichero con los 10.000 dominios más populares …
+✅ /opt/threat_hunting_lists/top_domains/top_10000_domains.csv creado (10k líneas)
+🎉 Proceso completado.
+[2025-10-22T15:44:17Z] Cleanup: removed /opt/threat_hunting_lists/top_domains/top-1m.csv.zip and /opt/threat_hunting_lists/top_domains/top-1m.csv (if existed)

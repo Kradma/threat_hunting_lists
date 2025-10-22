@@ -1,0 +1,63 @@
+# =============================
+# Ignorar scripts y código fuente
+# =============================
+
+# Todos los scripts Python
+*.py
+# Todos los bytecode compilados
+*.pyc
+__pycache__/
+
+# Todos los scripts de shell
+*.sh
+
+# =============================
+# Ignorar logs y temporales
+# =============================
+
+*.log
+*.tmp
+*.bak
+*.swp
+*.swp
+*~   # archivos temporales de editores
+nohup.out
+
+# =============================
+# Ignorar entornos virtuales y dependencias locales
+# =============================
+
+.venv/
+venv/
+env/
+pip-wheel-metadata/
+*.egg-info/
+*.egg
+*.whl
+
+# =============================
+# Ignorar ficheros descargados grandes o transitorios
+# =============================
+
+top_domains/top-1m.csv
+top_domains/top-1m.csv.zip
+TLDs/latest_bad_tlds_phishing_cybercrimeinfocenter_list.csv
+
+# =============================
+# Ignorar archivos de sistema y de IDE
+# =============================
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# =============================
+# Mantener los CSV finales que sí deben subirse
+# =============================
+
+!TLDs/*.csv
+!top_domains/*.csv
+

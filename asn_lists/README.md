@@ -1,44 +1,44 @@
 # ASN Lists
 
-Esta carpeta publica las salidas CSV del enriquecimiento de reputacion por ASN en un formato listo para consumir desde GitHub.
+This folder publishes the CSV outputs of the ASN reputation enrichment workflow in a format ready to consume from GitHub.
 
-## Archivos publicados
+## Published files
 
-- `asn_reputation.csv`: dataset completo.
-- `asn_reputation_nonzero.csv`: mismo esquema, filtrado a filas con `maliciousness_score > 0`.
+- `asn_reputation.csv`: full dataset.
+- `asn_reputation_nonzero.csv`: same schema, filtered to rows where `maliciousness_score > 0`.
 
-Los CSV publicados en esta carpeta no incluyen las lineas de comentario del export nativo, para que puedan cargarse con `externaldata()` en KQL sin preprocesado adicional.
+The CSV files published in this folder do not include the comment lines from the native export, so they can be loaded with `externaldata()` in KQL without any extra preprocessing.
 
-## Como interpretar los resultados
+## How to interpret the results
 
-- `asn`: ASN en formato `AS12345`.
-- `description`: nombre del operador o descripcion publica del ASN.
-- `maliciousness_score`: score operativo de 0 a 100. Cuanto mas alto, mayor senal de actividad maliciosa o abuso sostenido.
-- `confidence_score`: confianza del dataset en esa lectura. Ayuda a distinguir senales fuertes de observaciones debiles o poco persistentes.
-- `category`: clasificacion principal. Los valores mas accionables suelen ser `hard_block`, `malicious_infrastructure`, `high_risk_abused_hosting` y `high_risk_access_network_abuse`.
-- `recommended_action`: sugerencia operativa para ese ASN.
-- `observed_bad_ipv4_unique`: numero de IPv4 unicas observadas con senal maliciosa, deduplicadas entre feeds.
-- `observed_bad_ipv4_weighted`: intensidad agregada de senal entre feeds. Puede ser mayor que la metrica `unique`.
-- `abuse_ratio_unique_pct`: porcentaje estimado del espacio IPv4 del ASN con senal unica observada.
-- `distinct_feeds` y `distinct_feed_families`: cuantas fuentes y familias de fuentes apoyan la clasificacion.
-- `operator_profile` y `operator_tags`: contexto del tipo de operador para ajustar la interpretacion.
-- `spamhaus_asndrop_flag`: el ASN aparece en Spamhaus ASN-DROP.
-- `community_bad_asn_flag`: el ASN aparece en una lista comunitaria de riesgo.
-- `known_scanner_flag`: ASN conocido por actividad de escaneo de investigacion; no siempre implica actividad maliciosa.
-- `ripe_*`: contexto adicional de routing y RPKI desde RIPEstat.
-- `first_seen_utc`, `last_seen_utc`, `runs_seen_30d` y `days_observed_30d`: persistencia temporal de la senal.
-- `reasons`: resumen textual de por que el ASN quedo clasificado asi.
+- `asn`: ASN in `AS12345` format.
+- `description`: operator name or public ASN description.
+- `maliciousness_score`: operational score from 0 to 100. The higher it is, the stronger the signal of malicious activity or sustained abuse.
+- `confidence_score`: confidence level for that assessment. It helps distinguish strong signals from weak or low-persistence observations.
+- `category`: primary classification. The most actionable values are usually `hard_block`, `malicious_infrastructure`, `high_risk_abused_hosting`, and `high_risk_access_network_abuse`.
+- `recommended_action`: suggested operational handling for that ASN.
+- `observed_bad_ipv4_unique`: number of unique IPv4 addresses observed with malicious signals, deduplicated across feeds.
+- `observed_bad_ipv4_weighted`: aggregated signal intensity across feeds. It can be higher than the `unique` metric.
+- `abuse_ratio_unique_pct`: estimated percentage of the ASN IPv4 space with unique observed signal.
+- `distinct_feeds` and `distinct_feed_families`: how many sources and source families support the classification.
+- `operator_profile` and `operator_tags`: operator context to help interpret the result.
+- `spamhaus_asndrop_flag`: the ASN appears in Spamhaus ASN-DROP.
+- `community_bad_asn_flag`: the ASN appears in a community-maintained risk list.
+- `known_scanner_flag`: ASN known for research scanning activity; it does not always imply malicious behavior.
+- `ripe_*`: additional routing and RPKI context from RIPEstat.
+- `first_seen_utc`, `last_seen_utc`, `runs_seen_30d`, and `days_observed_30d`: temporal persistence of the signal.
+- `reasons`: short textual summary explaining why the ASN was classified that way.
 
-## Guia rapida de uso
+## Quick usage guidance
 
-- Para investigacion amplia, usa `asn_reputation.csv`.
-- Para deteccion, enrichment o listas de bloqueo blandas, suele ser mejor partir de `asn_reputation_nonzero.csv`.
-- Si necesitas una lista mas restrictiva, filtra por `maliciousness_score >= 60` o por categorias concretas.
-- Si tu telemetria guarda el ASN como numero, convierte `AS12345` a entero con `toint(replace_string(asn, "AS", ""))`.
+- For broad investigations, use `asn_reputation.csv`.
+- For detections, enrichment, or soft-block lists, `asn_reputation_nonzero.csv` is usually the better starting point.
+- If you need a stricter list, filter on `maliciousness_score >= 60` or on specific categories.
+- If your telemetry stores ASN as a number, convert `AS12345` to integer with `toint(replace_string(asn, "AS", ""))`.
 
-## KQL: cargar el CSV desde GitHub
+## KQL: load the CSV from GitHub
 
-Sustituye `<ORG>`, `<REPO>` y la rama si no usas `main`.
+Replace `<ORG>`, `<REPO>`, and the branch name if you do not use `main`.
 
 ```kusto
 let asn_nonzero = externaldata(
@@ -68,9 +68,9 @@ asn_nonzero
 | order by maliciousness_score desc
 ```
 
-## KQL: usarlo como lista en una query
+## KQL: use it as a list in a query
 
-Ejemplo generico para cruzar la lista con una tabla que ya tenga un ASN numerico. Cambia `DestinationAsNumber` por el campo ASN de tu tabla.
+Generic example to join the list with a table that already contains a numeric ASN field. Replace `DestinationAsNumber` with the ASN field used in your table.
 
 ```kusto
 let watched_asns = materialize(
@@ -104,6 +104,6 @@ CommonSecurityLog
 | project TimeGenerated, DeviceVendor, DeviceProduct, DestinationAsNumber, category, recommended_action
 ```
 
-## Nota operativa
+## Operational note
 
-Los artefactos internos del proceso (`summary`, `state`, `cache`, logs) se mantienen fuera de esta carpeta. Aqui solo se publican los CSV finales orientados a consumo desde GitHub y KQL.
+Internal process artifacts (`summary`, `state`, `cache`, logs) are kept outside this folder. Only the final CSV files intended for GitHub and KQL consumption are published here.

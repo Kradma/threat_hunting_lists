@@ -1,6 +1,6 @@
 # ASN Lists
 
-This folder publishes the CSV outputs of the ASN reputation enrichment workflow in a format ready to consume from GitHub.
+This folder contains the ASN reputation dataset. The top-level CSV files are published for GitHub consumption, while local-only implementation assets for the builder live under this same directory tree.
 
 ## Published files
 
@@ -106,4 +106,4 @@ CommonSecurityLog
 
 ## Operational note
 
-Internal process artifacts (`summary`, `state`, `cache`, logs) are kept outside this folder. Only the final CSV files intended for GitHub and KQL consumption are published here.
+Local-only process artifacts (`output/`, cache, logs, tests, builder script) also live under this directory tree but are ignored by Git. The published files intended for GitHub and KQL consumption remain the top-level `README.md`, `asn_reputation.csv`, and `asn_reputation_nonzero.csv`.

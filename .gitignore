@@ -42,6 +42,10 @@ pip-wheel-metadata/
 top_domains/top-1m.csv
 top_domains/top-1m.csv.zip
 TLDs/latest_bad_tlds_phishing_cybercrimeinfocenter_list.csv
+asn_lists/output/
+asn_lists/requirements.txt
+asn_lists/README.local.md
+asn_lists/tests/
 
 # =============================
 # Ignorar archivos de sistema y de IDE
@@ -60,4 +64,5 @@ Thumbs.db
 
 !TLDs/*.csv
 !top_domains/*.csv
-
+!asn_lists/*.csv
+!asn_lists/README.md

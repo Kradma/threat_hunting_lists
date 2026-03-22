@@ -1,109 +1,126 @@
 # ASN Lists
 
-This folder contains the ASN reputation dataset. The top-level CSV files are published for GitHub consumption, while local-only implementation assets for the builder live under this same directory tree.
+This folder contains ASN reputation datasets intended for threat hunting, enrichment, triage, and blocklist curation. This document explains what the files contain, when to use each one, and how to consume them from KQL.
 
 ## Published files
 
-- `asn_reputation.csv`: full dataset.
+- `asn_reputation.csv`: full ASN reputation dataset.
 - `asn_reputation_nonzero.csv`: same schema, filtered to rows where `maliciousness_score > 0`.
 
-The CSV files published in this folder do not include the comment lines from the native export, so they can be loaded with `externaldata()` in KQL without any extra preprocessing.
+Both CSV files can be loaded directly with `externaldata()` in KQL without extra preprocessing.
 
-## How to interpret the results
+## When to use each file
 
-- `asn`: ASN in `AS12345` format.
-- `description`: operator name or public ASN description.
-- `maliciousness_score`: operational score from 0 to 100. The higher it is, the stronger the signal of malicious activity or sustained abuse.
-- `confidence_score`: confidence level for that assessment. It helps distinguish strong signals from weak or low-persistence observations.
-- `category`: primary classification. The most actionable values are usually `hard_block`, `malicious_infrastructure`, `high_risk_abused_hosting`, and `high_risk_access_network_abuse`.
-- `recommended_action`: suggested operational handling for that ASN.
-- `observed_bad_ipv4_unique`: number of unique IPv4 addresses observed with malicious signals, deduplicated across feeds.
-- `observed_bad_ipv4_weighted`: aggregated signal intensity across feeds. It can be higher than the `unique` metric.
-- `abuse_ratio_unique_pct`: estimated percentage of the ASN IPv4 space with unique observed signal.
-- `distinct_feeds` and `distinct_feed_families`: how many sources and source families support the classification.
-- `operator_profile` and `operator_tags`: operator context to help interpret the result.
-- `spamhaus_asndrop_flag`: the ASN appears in Spamhaus ASN-DROP.
-- `community_bad_asn_flag`: the ASN appears in a community-maintained risk list.
-- `known_scanner_flag`: ASN known for research scanning activity; it does not always imply malicious behavior.
-- `ripe_*`: additional routing and RPKI context from RIPEstat.
-- `first_seen_utc`, `last_seen_utc`, `runs_seen_30d`, and `days_observed_30d`: temporal persistence of the signal.
-- `reasons`: short textual summary explaining why the ASN was classified that way.
+- Use `asn_reputation.csv` when you want the complete dataset, including benign or currently unscored ASNs.
+- Use `asn_reputation_nonzero.csv` when you want a smaller and more actionable list for detections, enrichment, or watchlists.
+- If you need a stricter subset, filter by `maliciousness_score`, `confidence_score`, or `category`.
 
-## Quick usage guidance
+## CSV fields
 
-- For broad investigations, use `asn_reputation.csv`.
-- For detections, enrichment, or soft-block lists, `asn_reputation_nonzero.csv` is usually the better starting point.
-- If you need a stricter list, filter on `maliciousness_score >= 60` or on specific categories.
-- If your telemetry stores ASN as a number, convert `AS12345` to integer with `toint(replace_string(asn, "AS", ""))`.
+### Identity and classification
 
-## KQL: load the CSV from GitHub
+- `asn`: Autonomous System Number in `AS12345` format.
+- `description`: Public description or operator name associated with the ASN.
+- `category`: Main classification assigned to the ASN.
+- `recommended_action`: Suggested operational handling for the ASN.
+- `reasons`: Short textual explanation of the main reasons behind the classification.
 
-Replace `<ORG>`, `<REPO>`, and the branch name if you do not use `main`.
+### Core scoring
 
-```kusto
-let asn_nonzero = externaldata(
-    asn:string,
-    description:string,
-    total_ipv4:long,
-    observed_bad_ipv4_unique:long,
-    observed_bad_ipv4_weighted:long,
-    abuse_ratio_unique_pct:real,
-    abuse_ratio_weighted_pct:real,
-    distinct_feeds:int,
-    distinct_feed_families:int,
-    maliciousness_score:int,
-    confidence_score:int,
-    category:string,
-    operator_profile:string,
-    operator_tags:string,
-    recommended_action:string
-)
-[@"https://raw.githubusercontent.com/<ORG>/<REPO>/main/asn_lists/asn_reputation_nonzero.csv"]
-with (format="csv", ignoreFirstRecord=true);
+- `maliciousness_score`: Overall risk score from 0 to 100. Higher values indicate stronger evidence of malicious or abusive activity.
+- `confidence_score`: Confidence level for the assessment from 0 to 100.
+- `score_density`: Contribution related to how concentrated the malicious activity is within the ASN space.
+- `score_volume`: Contribution related to the absolute volume of malicious observations.
+- `score_diversity`: Contribution related to the number of distinct sources or signal families supporting the assessment.
+- `score_severity`: Contribution related to the seriousness of the observed activity.
+- `score_persistence`: Contribution related to how consistently the ASN appears over time.
+- `score_routing`: Contribution related to routing or Internet infrastructure risk indicators.
+- `score_context_adjustment`: Context-based adjustment applied to the overall score.
+- `routing_risk_score`: Routing-specific risk subscore.
+- `rpki_risk_score`: RPKI-specific risk subscore.
 
-asn_nonzero
-| extend asn_number = toint(replace_string(asn, "AS", ""))
-| where maliciousness_score >= 60
-| project asn, asn_number, maliciousness_score, confidence_score, category, recommended_action
-| order by maliciousness_score desc
-```
+### Activity volume and prevalence
 
-## KQL: use it as a list in a query
+- `total_ipv4`: Estimated number of IPv4 addresses announced by the ASN.
+- `observed_bad_ipv4_unique`: Number of unique IPv4 addresses from the ASN observed with malicious signals.
+- `observed_bad_ipv4_weighted`: Weighted activity count across feeds. This can be higher than the unique count when the same ASN is seen repeatedly or in multiple sources.
+- `abuse_ratio_unique_pct`: Percentage of the ASN IPv4 space covered by unique malicious observations.
+- `abuse_ratio_weighted_pct`: Weighted version of the abuse ratio, taking repeated observations into account.
 
-Generic example to join the list with a table that already contains a numeric ASN field. Replace `DestinationAsNumber` with the ASN field used in your table.
+### Source coverage
+
+- `distinct_feeds`: Number of distinct data feeds that contributed to the ASN assessment.
+- `distinct_feed_families`: Number of distinct feed families represented in the ASN assessment.
+
+### Operator context
+
+- `operator_profile`: High-level operator profile used to interpret the ASN, such as access network, hosting, or bulletproof hosting.
+- `operator_tags`: Additional operator tags that add context to the profile.
+
+### Flags
+
+- `spamhaus_asndrop_flag`: `1` if the ASN appears in Spamhaus ASN-DROP, otherwise `0`.
+- `community_bad_asn_flag`: `1` if the ASN appears in a community-maintained bad ASN list, otherwise `0`.
+- `known_scanner_flag`: `1` if the ASN is known for research or Internet-wide scanning activity, otherwise `0`.
+- `ripe_rpki_partial_flag`: `1` if RIPEstat indicates partial RPKI coverage for the ASN, otherwise `0`.
+
+### Feed-specific weighted signals
+
+- `spamhaus_drop_ipv4_weighted`: Weighted IPv4 signal contribution coming from Spamhaus DROP-related data.
+- `threatfox_ipport_recent_ipv4_weighted`: Weighted IPv4 signal contribution coming from recent ThreatFox IP:port observations.
+- `urlhaus_recent_urls_ipv4_weighted`: Weighted IPv4 signal contribution coming from recent URLhaus URL observations.
+- `openphish_feed_ipv4_weighted`: Weighted IPv4 signal contribution coming from OpenPhish feed observations.
+
+### RIPE routing and visibility fields
+
+- `ripe_first_seen_utc`: First time RIPEstat observed the ASN in routing data.
+- `ripe_last_seen_utc`: Most recent time RIPEstat observed the ASN in routing data.
+- `ripe_visibility_v4_pct`: IPv4 visibility percentage reported by RIPEstat.
+- `ripe_announced_prefixes_v4`: Number of announced IPv4 prefixes seen for the ASN.
+- `ripe_announced_ipv4`: Number of announced IPv4 addresses seen for the ASN.
+- `ripe_observed_neighbours`: Number of observed neighbouring ASNs in routing data.
+
+### RIPE RPKI fields
+
+- `ripe_rpki_total_prefixes_v4`: Total IPv4 prefixes considered for RPKI analysis.
+- `ripe_rpki_prefixes_checked_v4`: IPv4 prefixes actually checked for RPKI validation.
+- `ripe_rpki_valid_prefixes_v4`: IPv4 prefixes with valid RPKI status.
+- `ripe_rpki_invalid_asn_prefixes_v4`: IPv4 prefixes invalid because of ASN mismatch.
+- `ripe_rpki_invalid_length_prefixes_v4`: IPv4 prefixes invalid because of prefix length mismatch.
+- `ripe_rpki_invalid_prefixes_v4`: Total IPv4 prefixes with invalid RPKI status.
+- `ripe_rpki_unknown_prefixes_v4`: IPv4 prefixes with unknown RPKI status.
+- `ripe_rpki_coverage_pct_v4`: Percentage of IPv4 prefixes with RPKI coverage.
+
+### Observation window
+
+- `first_seen_utc`: First time the ASN was seen by this dataset within the recent observation window.
+- `last_seen_utc`: Most recent time the ASN was seen by this dataset within the recent observation window.
+- `runs_seen_30d`: Number of collection runs in the last 30 days where the ASN was present.
+- `days_observed_30d`: Number of distinct days in the last 30 days where the ASN was observed.
+
+## Example KQL usage
+
+Replace `<ORG>`, `<REPO>`, and `<BRANCH>` with your repository values. This example loads only the columns used in the query, converts the ASN from `AS12345` to integer format, and joins it with a table that already contains a numeric ASN field.
 
 ```kusto
 let watched_asns = materialize(
     externaldata(
         asn:string,
         description:string,
-        total_ipv4:long,
-        observed_bad_ipv4_unique:long,
-        observed_bad_ipv4_weighted:long,
-        abuse_ratio_unique_pct:real,
-        abuse_ratio_weighted_pct:real,
-        distinct_feeds:int,
-        distinct_feed_families:int,
         maliciousness_score:int,
         confidence_score:int,
         category:string,
-        operator_profile:string,
-        operator_tags:string,
         recommended_action:string
     )
-    [@"https://raw.githubusercontent.com/<ORG>/<REPO>/main/asn_lists/asn_reputation_nonzero.csv"]
+    [@"https://raw.githubusercontent.com/<ORG>/<REPO>/<BRANCH>/asn_lists/asn_reputation_nonzero.csv"]
     with (format="csv", ignoreFirstRecord=true)
     | extend asn_number = toint(replace_string(asn, "AS", ""))
     | where maliciousness_score >= 60
-    | project asn_number, category, recommended_action
+    | project asn_number, asn, description, maliciousness_score, confidence_score, category, recommended_action
 );
 
 CommonSecurityLog
 | where DestinationAsNumber in (watched_asns | project asn_number)
 | join kind=leftouter watched_asns on $left.DestinationAsNumber == $right.asn_number
-| project TimeGenerated, DeviceVendor, DeviceProduct, DestinationAsNumber, category, recommended_action
+| project TimeGenerated, DeviceVendor, DeviceProduct, DestinationAsNumber, asn, description, maliciousness_score, confidence_score, category, recommended_action
 ```
-
-## Operational note
-
-Local-only process artifacts (`output/`, cache, logs, tests, builder script) also live under this directory tree but are ignored by Git. The published files intended for GitHub and KQL consumption remain the top-level `README.md`, `asn_reputation.csv`, and `asn_reputation_nonzero.csv`.
